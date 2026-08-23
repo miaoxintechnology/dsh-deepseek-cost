@@ -50,10 +50,8 @@ dsh web   # 重启后生效
 
 ### 方式二:从 Git 仓库安装
 
-把插件目录推到一个 Git 仓库后:
-
 ```bash
-dsh plugin --profile web add github:<owner>/dsh-deepseek-cost
+dsh plugin --profile web add github:miaoxintechnology/dsh-deepseek-cost
 dsh web
 ```
 
@@ -63,20 +61,17 @@ dsh web
 
 #### 发布到 GitHub(作者侧)
 
-1. 在 github.com 新建**空**仓库 `dsh-deepseek-cost`(不要勾选
-   README/.gitignore/license,以免和本地内容冲突);
-2. 本地推送:
+仓库:<https://github.com/miaoxintechnology/dsh-deepseek-cost>(分支 `main`,标签 `v0.1.1`)
+
+1. 本地推送:
 
    ```bash
    cd dsh-deepseek-cost
-   git remote add origin https://github.com/<你的用户名>/dsh-deepseek-cost.git
+   git remote add origin https://github.com/miaoxintechnology/dsh-deepseek-cost.git
    git push -u origin main --tags
    ```
 
-   或安装 gh CLI 后一条命令完成建仓+推送:
-   `gh auth login && gh repo create dsh-deepseek-cost --public --source=. --push`。
-
-3. 之后任意设备即可按上方方式二安装;更新插件后 `git push` 新提交,
+2. 之后任意设备即可按上方方式二安装;更新插件后 `git push` 新提交,
    其它设备 `dsh plugin --profile web update dsh-deepseek-cost` 即可升级。
 
 > 仓库已内置 `.gitignore`(排除 `node_modules/`、构建产物),首次提交
