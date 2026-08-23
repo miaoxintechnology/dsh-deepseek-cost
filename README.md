@@ -61,6 +61,28 @@ dsh web
 `allowBuilds` 授权;如果 pnpm 仍提示,按提示把 key 加入
 `~/.dsh/profiles/web/pnpm-workspace.yaml` 的 `allowBuilds` 后重试。
 
+#### 发布到 GitHub(作者侧)
+
+1. 在 github.com 新建**空**仓库 `dsh-deepseek-cost`(不要勾选
+   README/.gitignore/license,以免和本地内容冲突);
+2. 本地推送:
+
+   ```bash
+   cd dsh-deepseek-cost
+   git remote add origin https://github.com/<你的用户名>/dsh-deepseek-cost.git
+   git push -u origin main --tags
+   ```
+
+   或安装 gh CLI 后一条命令完成建仓+推送:
+   `gh auth login && gh repo create dsh-deepseek-cost --public --source=. --push`。
+
+3. 之后任意设备即可按上方方式二安装;更新插件后 `git push` 新提交,
+   其它设备 `dsh plugin --profile web update dsh-deepseek-cost` 即可升级。
+
+> 仓库已内置 `.gitignore`(排除 `node_modules/`、构建产物),首次提交
+> 即含全部源码、测试与文档,`zod` 依赖由 pnpm 按 `package.json` 自动
+> 安装。
+
 ### 方式三:从 npm 安装(发布到 npm 后)
 
 ```bash
