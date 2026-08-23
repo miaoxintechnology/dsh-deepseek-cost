@@ -1,0 +1,5 @@
+# 依赖与构建产物不入库(安装时由 pnpm 按 package.json 安装 zod)
+node_modules/
+*.log
+*.zip
+.DS_Store

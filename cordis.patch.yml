@@ -1,0 +1,5 @@
+# dsh-deepseek-cost bundle patch. `dsh plugin --profile web add …`
+# discovers this layer through package.json's dsh.bundle declaration.
+- insert:
+    - id: deepseek-cost
+      name: 'dsh-deepseek-cost'
