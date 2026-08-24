@@ -55,13 +55,18 @@ dsh plugin --profile web add github:miaoxintechnology/dsh-deepseek-cost
 dsh web
 ```
 
+> 网络受限(无法访问 GitHub)时:
+> - 改用 Gitee 等国内镜像仓库:
+>   `dsh plugin --profile web add https://gitee.com/<用户名>/dsh-deepseek-cost.git`;
+> - 或直接用离线安装包(见下方「跨设备安装」),完全不需要任何 Git 服务。
+
 本插件**没有任何构建/安装脚本**(无 `prepare`/`build`),因此不需要
 `allowBuilds` 授权;如果 pnpm 仍提示,按提示把 key 加入
 `~/.dsh/profiles/web/pnpm-workspace.yaml` 的 `allowBuilds` 后重试。
 
 #### 发布到 GitHub(作者侧)
 
-仓库:<https://github.com/miaoxintechnology/dsh-deepseek-cost>(分支 `main`,标签 `v0.1.1`)
+仓库:<https://github.com/miaoxintechnology/dsh-deepseek-cost>(分支 `main`,标签 `v0.1.2`)
 
 1. 本地推送:
 
@@ -71,7 +76,14 @@ dsh web
    git push -u origin main --tags
    ```
 
-2. 之后任意设备即可按上方方式二安装;更新插件后 `git push` 新提交,
+2. GitHub 连不上时,推一份到 Gitee 即可(国内直连稳定):
+
+   ```bash
+   git remote add gitee https://gitee.com/<你的用户名>/dsh-deepseek-cost.git
+   git push gitee main --tags
+   ```
+
+3. 之后任意设备即可按上方方式二安装;更新插件后 `git push` 新提交,
    其它设备 `dsh plugin --profile web update dsh-deepseek-cost` 即可升级。
 
 > 仓库已内置 `.gitignore`(排除 `node_modules/`、构建产物),首次提交
