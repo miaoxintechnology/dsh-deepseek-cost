@@ -48,6 +48,10 @@
     "usage",
     "billing"
   ],
+  "scripts": {
+    "test": "node test/fold.test.js",
+    "prepublishOnly": "node test/fold.test.js"
+  },
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
