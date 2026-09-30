@@ -1,6 +1,6 @@
 {
   "name": "dsh-deepseek-cost",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "DeepSeek API 费用统计插件:自动读取模型名称、token 用量与时段,按官方价格计算当前任务的 API 总费用并显示在 Web 聊天页",
   "license": "MIT",
   "repository": {
