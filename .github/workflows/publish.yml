@@ -31,6 +31,10 @@ jobs:
       - name: 升级 npm
         run: npm install -g npm@latest
 
+      # 该包依赖 zod，prepublishOnly 跑测试需要它
+      - name: 安装依赖
+        run: npm install --no-audit --no-fund
+
       # prepublishOnly 会自动跑测试（fold.test.js），保证发布产物与源码一致
       - name: 发布到 npm
         run: npm publish --provenance --access public
