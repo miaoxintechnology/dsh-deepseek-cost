@@ -34,9 +34,17 @@ export interface DeepseekCostModelRow {
   lastTime: number | null;
 }
 
+/** 节假日闭区间。 */
+export interface HolidayRange {
+  /** 'YYYY-MM-DD'(含)。 */
+  start: string;
+  /** 'YYYY-MM-DD'(含)。 */
+  end: string;
+}
+
 /** `deepseekCost` 投影单元的值(客户端 `useProjection('deepseekCost')` 读取)。 */
 export interface DeepseekCostProjection {
-  version: 1;
+  version: 2;
   /** 币种(默认 'CNY')。 */
   currency: string;
   /** 价格参考来源 URL。 */
@@ -51,11 +59,13 @@ export interface DeepseekCostProjection {
   peakEnabled: boolean;
   /** 高峰价格倍数。 */
   peakMultiplier: number;
-  /** 峰谷窗口配置(客户端按北京时间判定“当前时段”用)。 */
+  /** 峰谷窗口与节假日配置(客户端按北京时间判定“当前时段”用)。 */
   peakConfig: {
     /** 高峰窗口(半开区间 [start, end));官方:工作日 9–12、14–18。 */
     windows: { start: number; end: number }[];
     weekendOffpeak: boolean;
+    /** 中国法定节假日区间,全天谷价(内置 + 算法兜底至 2099 + CDN 自动更新)。 */
+    holidays: HolidayRange[];
   };
   /** 计费时段起点(epoch ms);无用量时为 null。 */
   periodStart: number | null;
@@ -66,6 +76,22 @@ export interface DeepseekCostProjection {
   /** 未匹配到价格的模型名。 */
   unpricedModels: string[];
 }
+
+/** 官方 /user/balance 查询结果(Remote `deepseekBalance/get`)。 */
+export type DeepseekBalanceResult =
+  | {
+      ok: true;
+      /** 官方 is_available。 */
+      isAvailable: boolean;
+      /** 币种(CNY/USD)。 */
+      currency: string;
+      /** 总余额字符串(官方 total_balance)。 */
+      balance: string;
+    }
+  | {
+      ok: false;
+      error: string;
+    };
 
 /** 投影单元的内部状态(纯 JSON)。 */
 export interface DeepseekCostState {
@@ -106,6 +132,21 @@ declare module '@deepseek-ai/dsh-session-projection/types' {
   }
 }
 
+declare module '@deepseek-ai/dsh-typert-protocol' {
+  interface TypertRemoteMap {
+    'deepseekBalance/get': () => Promise<
+      import('@deepseek-ai/dsh-typert-protocol').RemoteResult<DeepseekBalanceResult>
+    >;
+  }
+  interface TypertRemoteNamespaceMap {
+    deepseekBalance: {
+      get: () => Promise<
+        import('@deepseek-ai/dsh-typert-protocol').RemoteResult<DeepseekBalanceResult>
+      >;
+    };
+  }
+}
+
 /** 插件配置(可在 cordis.patch.yml 的 config: 中覆盖部分定价)。 */
 export interface DeepseekCostConfig {
   pricing?: {
@@ -116,6 +157,8 @@ export interface DeepseekCostConfig {
       startHour?: number;
       endHour?: number;
       weekendOffpeak?: boolean;
+      /** 显式节假日区间表(整体替换默认表)。 */
+      holidays?: HolidayRange[];
     };
     models?: Record<string, { input: number; cacheHit: number; output: number }>;
     familyFallback?: Record<string, string>;
@@ -124,11 +167,14 @@ export interface DeepseekCostConfig {
 }
 
 export declare const DEEPSEEK_COST_PROJECTION_KEY: 'deepseekCost';
-export declare function createDeepseekCostProjectionDefinition(
-  pricing: unknown
-): ProjectionDefinition<'deepseekCost', DeepseekCostState>;
-export declare class DeepseekCostProjection {
+export declare function createDeepseekCostProjectionDefinition(pricingHolder: {
+  pricing: unknown;
+}): ProjectionDefinition<'deepseekCost', DeepseekCostState>;
+export declare class DeepseekCostPlugin {
   static inject: string[];
   constructor(ctx: any, config?: DeepseekCostConfig): void;
+  refreshHolidays(): Promise<void>;
+  resolveApiKey(): Promise<string | undefined>;
+  get(): Promise<DeepseekBalanceResult>;
 }
-export default DeepseekCostProjection;
+export default DeepseekCostPlugin;

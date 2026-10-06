@@ -5,19 +5,27 @@
 import assert from 'node:assert/strict';
 import {
   createDeepseekCostProjectionDefinition,
-  DEFAULT_PRICING,
-} from '../lib/index.js';
+} from '../lib/projection.js';
 import {
+  DEFAULT_PRICING,
   classifyPeriod,
   normalizePricing,
   priceUsage,
   roundCost,
 } from '../lib/pricing.js';
+import {
+  buildDefaultHolidayRanges,
+  computedHolidayRanges,
+  isHolidayDate,
+  solarToLunar,
+} from '../lib/holidays.js';
 
 const pricing = normalizePricing();
+const holder = { pricing };
 
 // —— classifyPeriod:官方公告,工作日北京时间 9:00–12:00、14:00–18:00
-//    为高峰,其余(含午间空档与夜间)为低谷;周六/周日全天低谷 ——
+//    为高峰,其余(含午间空档与夜间)为低谷;周六/周日与中国法定
+//    节假日全天低谷 ——
 // 2026-08-24 是周一。
 assert.equal(classifyPeriod(pricing, Date.UTC(2026, 7, 24, 2, 0, 0)), 'peak'); // 北京 10:00(上午窗)
 assert.equal(classifyPeriod(pricing, Date.UTC(2026, 7, 24, 4, 0, 0)), 'offpeak'); // 北京 12:00(端点不含)
@@ -29,6 +37,35 @@ assert.equal(classifyPeriod(pricing, Date.UTC(2026, 7, 24, 15, 0, 0)), 'offpeak'
 assert.equal(classifyPeriod(pricing, Date.UTC(2026, 7, 23, 19, 0, 0)), 'offpeak'); // 北京周一 03:00
 assert.equal(classifyPeriod(pricing, Date.UTC(2026, 7, 22, 6, 0, 0)), 'offpeak'); // 周六 14:00 北京
 assert.equal(classifyPeriod(pricing, Date.UTC(2026, 7, 23, 2, 0, 0)), 'offpeak'); // 周日 10:00 北京
+// 法定节假日全天低谷(2026 官方安排):
+assert.equal(classifyPeriod(pricing, Date.UTC(2026, 9, 1, 6, 0, 0)), 'offpeak'); // 2026-10-01 国庆(周四)14:00
+assert.equal(classifyPeriod(pricing, Date.UTC(2026, 1, 20, 6, 0, 0)), 'offpeak'); // 2026-02-20 春节假期(周五)14:00
+assert.equal(classifyPeriod(pricing, Date.UTC(2026, 9, 8, 6, 0, 0)), 'peak'); // 2026-10-08 假期后(周四)14:00
+// 农历算法兜底:2027 春节初一(农历正月初一)应判低谷
+{
+  let cny2027 = null;
+  for (let d = 15; d <= 31; d++) {
+    const r = solarToLunar(2027, 1, d);
+    if (r.lMonth === 1 && r.lDay === 1) { cny2027 = { m: 1, d }; break; }
+  }
+  if (!cny2027) {
+    for (let d = 1; d <= 28; d++) {
+      const r = solarToLunar(2027, 2, d);
+      if (r.lMonth === 1 && r.lDay === 1) { cny2027 = { m: 2, d }; break; }
+    }
+  }
+  assert.ok(cny2027, '2027 春节初一可计算');
+  assert.equal(
+    classifyPeriod(pricing, Date.UTC(2027, cny2027.m - 1, cny2027.d, 6, 0, 0)),
+    'offpeak',
+    '2027 春节初一(算法兜底)应为低谷'
+  );
+}
+// 节假日工具函数
+assert.equal(isHolidayDate('2026-10-05', pricing.peak.holidays), true);
+assert.equal(isHolidayDate('2026-10-08', pricing.peak.holidays), false);
+assert.ok(computedHolidayRanges(2099).length > 0, '2099 年有兜底节假日');
+assert.ok(buildDefaultHolidayRanges().some((r) => r.start === '2099-01-01'), '默认表覆盖到 2099');
 // 旧版 startHour/endHour 单窗口配置自动转换为 windows
 const legacy = normalizePricing({ peak: { startHour: 8, endHour: 23 } });
 assert.deepEqual(legacy.peak.windows, [{ start: 8, end: 23 }]);
@@ -63,8 +100,9 @@ assert.equal(priceUsage(pricing, { inputTokens: 1e6 }, 'deepseek-v4-pro-0813', '
 assert.equal(priceUsage(pricing, { inputTokens: 1e6 }, 'deepseek-v4-flash-vision-exp', 'offpeak').cost, 1.5);
 
 // —— 投影折叠 ——
-const def = createDeepseekCostProjectionDefinition(pricing);
+const def = createDeepseekCostProjectionDefinition(holder);
 let state = def.init();
+assert.equal(def.stateVersion, 2, 'v2:节假日规则参与时段分类,旧缓存重折');
 
 function ev(type, data, time) {
   return { type, seq: 0, time, data };
@@ -111,13 +149,18 @@ assert.equal(view.currency, 'CNY');
 assert.equal(view.totalCost, 0.0356);
 assert.equal(view.costPeak, 0.016);
 assert.equal(view.costOffpeak, 0.0196);
-assert.deepEqual(view.peakConfig, {
-  windows: [
-    { start: 9, end: 12 },
-    { start: 14, end: 18 },
-  ],
-  weekendOffpeak: true,
-});
+assert.deepEqual(view.peakConfig.windows, [
+  { start: 9, end: 12 },
+  { start: 14, end: 18 },
+]);
+assert.equal(view.peakConfig.weekendOffpeak, true);
+assert.ok(
+  view.peakConfig.holidays.some(
+    (h) => h.start === '2026-10-01' && h.end === '2026-10-07'
+  ),
+  'wire 携带 2026 国庆节假日区间'
+);
+assert.ok(view.peakConfig.holidays.length > 100, 'wire 携带算法兜底至 2099 的节假日表');
 assert.equal(view.models.length, 1);
 const row = view.models[0];
 assert.equal(row.model, 'deepseek-chat');
