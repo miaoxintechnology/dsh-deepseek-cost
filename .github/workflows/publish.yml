@@ -35,6 +35,20 @@ jobs:
       - name: 安装依赖
         run: npm install --no-audit --no-fund
 
+      # 幂等保护：版本已存在于 npm 时跳过发布（避免重复发布报 403 并向账号发失败邮件）
+      - name: 检查版本是否已发布
+        id: check
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if npm view "dsh-deepseek-cost@$VERSION" version >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::dsh-deepseek-cost@$VERSION 已存在于 npm，跳过发布"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
       # prepublishOnly 会自动跑测试（fold.test.js），保证发布产物与源码一致
       - name: 发布到 npm
+        if: steps.check.outputs.exists == 'false'
         run: npm publish --provenance --access public
