@@ -180,7 +180,8 @@ dsh web   # 重启
 
 ```js
 models: {
-  'deepseek-v4-flash':    { input: 1.5, cacheHit: 0.05, output: 4.5 },
+  'deepseek-flash':       { input: 1,   cacheHit: 0.02, output: 4 },
+  'deepseek-v4-flash':    { input: 1,   cacheHit: 0.02, output: 4 },
   'deepseek-v4-pro':      { input: 4.5, cacheHit: 0.15, output: 13.5 },
   'deepseek-chat':        { input: 2,   cacheHit: 0.5,  output: 8 },
   'deepseek-reasoner':    { input: 4,   cacheHit: 1,    output: 16 },
@@ -207,15 +208,18 @@ models: {
   拉取失败静默回退内置数据。可在配置中整体替换:
   `peak.holidays: [{ start: '2027-01-01', end: '2027-01-01' }, ...]`。
 
-> ✅ **V4 系列已内置官方价目表**(2026-08 峰谷定价,低谷价,¥/百万 tokens):
+> ✅ **已内置官方最新价目表**(2026-10 官方定价页,低谷价,¥/百万 tokens):
 >
 > | 模型 | 输入(未命中) | 输入(命中) | 输出 |
 > |---|---|---|---|
-> | deepseek-v4-flash | 1.5 | 0.05 | 4.5 |
-> | deepseek-v4-pro | 4.5 | 0.15 | 13.5 |
-> | deepseek-v4-flash-vision-exp | 1.5 | 0.05 | 4.5 |
+> | deepseek-flash(V4.1-Flash) | 1 | 0.02 | 4 |
+> | deepseek-v4-pro(V4-Pro) | 4.5 | 0.15 | 13.5 |
+> | deepseek-v4-flash(**旧名,现按 Flash 计费**) | 1 | 0.02 | 4 |
+> | deepseek-v4-flash-vision-exp(**旧名,现按 Flash 计费**) | 1 | 0.02 | 4 |
 >
-> 高峰价 = 低谷价 × 2,与官方高峰档完全一致;周末(周六日)全天低谷。
+> 高峰价 = 低谷价 × 2,与官方高峰档完全一致;周末(周六日)与中国法定节假日全天低谷。
+> 官方注:旧模型名 `deepseek-v4-flash`、`deepseek-v4-flash-vision-exp` 仍可调用,
+> 但请求由 V4.1-Flash 提供服务并按 Flash 价格计费,故与 `deepseek-flash` 同价。
 > 版本化别名(`deepseek-v4-flash-0731`、`deepseek-v4-pro-0813`)同样内置。
 >
 > ⚠ `deepseek-chat` / `deepseek-reasoner` 仍为 2026-08-17 调价前的占位价;
@@ -232,7 +236,7 @@ models: {
         pricing:
           peak: { windows: [{ start: 9, end: 12 }, { start: 14, end: 18 }] }   # 例如:调整高峰窗口
           models:
-            deepseek-v4-flash-0901: { input: 1.5, cacheHit: 0.05, output: 4.5 }  # 例如:为新版本号定价
+            deepseek-v4-flash-0901: { input: 1, cacheHit: 0.02, output: 4 }  # 例如:为新版本号定价
 ```
 
 ## 工作原理
@@ -261,6 +265,15 @@ node test/fold.test.js   # 折叠逻辑冒烟测试(纯 Node,无 Cordis 依赖)
 ```
 
 ## 更新日志
+
+### v0.3.2
+
+- **价格同步官方最新定价(2026-10)**:新增 `deepseek-flash`(V4.1-Flash)
+  价目 1 / 0.02 / 4;按官方说明,旧模型名 `deepseek-v4-flash`、
+  `deepseek-v4-flash-vision-exp`(含 `-0731` 别名)已由 V4.1-Flash 提供
+  服务并按其价格计费,故三者由 1.5 / 0.05 / 4.5 下调为 1 / 0.02 / 4;
+  `deepseek-v4-pro` 维持 4.5 / 0.15 / 13.5,高峰仍为低谷 ×2;
+- 测试与 README 价目同步更新(新增 `deepseek-flash` 计费断言)。
 
 ### v0.3.0
 

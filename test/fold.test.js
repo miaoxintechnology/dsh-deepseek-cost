@@ -88,16 +88,22 @@ assert.equal(unknown.cost, 0);
 assert.equal(priceUsage(pricing, { inputTokens: 1e6, outputTokens: 1e6 }, 'deepseek-v4-pro', 'peak').cost, 36);
 // v4-pro 低谷:1M 缓存命中 = 0.15
 assert.equal(priceUsage(pricing, { cacheReadTokens: 1e6 }, 'deepseek-v4-pro', 'offpeak').cost, 0.15);
-// v4-flash 低谷:1M 输入未命中 = 1.5;缓存命中 = 0.05;输出 = 4.5
-assert.equal(priceUsage(pricing, { inputTokens: 1e6 }, 'deepseek-v4-flash', 'offpeak').cost, 1.5);
-assert.equal(priceUsage(pricing, { cacheReadTokens: 1e6 }, 'deepseek-v4-flash', 'offpeak').cost, 0.05);
-assert.equal(priceUsage(pricing, { outputTokens: 1e6 }, 'deepseek-v4-flash', 'offpeak').cost, 4.5);
-// v4-flash 高峰:1M 输入未命中 = 3.0
-assert.equal(priceUsage(pricing, { inputTokens: 1e6 }, 'deepseek-v4-flash', 'peak').cost, 3.0);
+// v4-flash(旧名,现按 V4.1-Flash 计费)低谷:1M 输入未命中 = 1;缓存命中 = 0.02;输出 = 4
+assert.equal(priceUsage(pricing, { inputTokens: 1e6 }, 'deepseek-v4-flash', 'offpeak').cost, 1);
+assert.equal(priceUsage(pricing, { cacheReadTokens: 1e6 }, 'deepseek-v4-flash', 'offpeak').cost, 0.02);
+assert.equal(priceUsage(pricing, { outputTokens: 1e6 }, 'deepseek-v4-flash', 'offpeak').cost, 4);
+// v4-flash 高峰:1M 输入未命中 = 2.0
+assert.equal(priceUsage(pricing, { inputTokens: 1e6 }, 'deepseek-v4-flash', 'peak').cost, 2.0);
+// 新版主模型名 deepseek-flash 与旧名同价
+assert.equal(priceUsage(pricing, { inputTokens: 1e6 }, 'deepseek-flash', 'offpeak').cost, 1);
+assert.equal(priceUsage(pricing, { cacheReadTokens: 1e6 }, 'deepseek-flash', 'offpeak').cost, 0.02);
+assert.equal(priceUsage(pricing, { outputTokens: 1e6 }, 'deepseek-flash', 'offpeak').cost, 4);
+assert.equal(priceUsage(pricing, { inputTokens: 1e6 }, 'deepseek-flash', 'peak').cost, 2.0);
+assert.equal(priceUsage(pricing, { inputTokens: 1e6, outputTokens: 1e6 }, 'deepseek-flash', 'peak').cost, 10); // (2 + 8) = 10
 // 版本化别名与 vision-exp
-assert.equal(priceUsage(pricing, { inputTokens: 1e6 }, 'deepseek-v4-flash-0731', 'offpeak').cost, 1.5);
+assert.equal(priceUsage(pricing, { inputTokens: 1e6 }, 'deepseek-v4-flash-0731', 'offpeak').cost, 1);
 assert.equal(priceUsage(pricing, { inputTokens: 1e6 }, 'deepseek-v4-pro-0813', 'peak').cost, 9.0);
-assert.equal(priceUsage(pricing, { inputTokens: 1e6 }, 'deepseek-v4-flash-vision-exp', 'offpeak').cost, 1.5);
+assert.equal(priceUsage(pricing, { inputTokens: 1e6 }, 'deepseek-v4-flash-vision-exp', 'offpeak').cost, 1);
 
 // —— 投影折叠 ——
 const def = createDeepseekCostProjectionDefinition(holder);
@@ -185,7 +191,7 @@ assert.equal(v2.unpricedModels.length, 1);
 assert.equal(v2.models[0].outputTokens, 100);
 
 // 7) V4 全链路折叠:1M 输入未命中 + 1M 缓存命中 + 1M 输出,高峰
-//    = (1.5×2 + 0.05×2 + 4.5×2) = 3 + 0.1 + 9 = 12.1
+//    = (1×2 + 0.02×2 + 4×2) = 2 + 0.04 + 8 = 10.04
 let s3 = def.init();
 s3 = def.apply(s3, ev('request/context', { provider: 'deepseek-official', model: 'deepseek-v4-flash' }, peakTime));
 s3 = def.apply(
@@ -193,7 +199,7 @@ s3 = def.apply(
   ev('assistant/message', { turn: 1, step: 1, message: {}, usage: { inputTokens: 1e6, cacheReadTokens: 1e6, outputTokens: 1e6 } }, peakTime)
 );
 const v3 = def.view(s3);
-assert.equal(v3.totalCost, 12.1);
+assert.equal(v3.totalCost, 10.04);
 assert.equal(v3.models[0].model, 'deepseek-v4-flash');
 assert.equal(v3.models[0].priced, true);
 assert.equal(v3.models[0].matchedModel, 'deepseek-v4-flash');
